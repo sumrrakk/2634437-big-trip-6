@@ -77,20 +77,24 @@ export default class TripModel extends Observable {
     this._notify(updateType, updatedPoint);
   }
 
-  addPoint(updateType, update) {
+  async addPoint(updateType, update) {
+    const newPoint = await this.#tripApiService.addPoint(update);
+
     this.points = [
-      update,
+      newPoint,
       ...this.points,
     ];
-    this._notify(updateType, update);
+    this._notify(updateType, newPoint);
   }
 
-  deletePoint(updateType, update) {
+  async deletePoint(updateType, update) {
     const index = this.points.findIndex((point) => point.id === update.id);
 
     if (index === -1) {
       throw new Error('Can\'t delete unexisting point');
     }
+
+    await this.#tripApiService.deletePoint(update);
 
     this.points = [
       ...this.points.slice(0, index),

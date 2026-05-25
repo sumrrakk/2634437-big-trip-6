@@ -106,35 +106,51 @@ export default class PointPresenter {
     this.#replacePointToForm();
   };
 
-  #handleFormSubmit = (updatedPoint) => {
-    this.#handleDataChange(
-      UserAction.UPDATE_POINT,
-      UpdateType.MINOR,
-      updatedPoint,
-    );
+  #handleFormSubmit = async (updatedPoint) => {
+    this.#pointEditComponent.setSaving();
+
+    try {
+      await this.#handleDataChange(
+        UserAction.UPDATE_POINT,
+        UpdateType.MINOR,
+        updatedPoint,
+      );
+    } catch {
+      this.#pointEditComponent.setAborting();
+    }
   };
 
   #handleRollupClick = () => {
     this.#replaceFormToPoint();
   };
 
-  #handleDeleteClick = (point) => {
-    this.#handleDataChange(
-      UserAction.DELETE_POINT,
-      UpdateType.MINOR,
-      point,
-    );
+  #handleDeleteClick = async (point) => {
+    this.#pointEditComponent.setDeleting();
+
+    try {
+      await this.#handleDataChange(
+        UserAction.DELETE_POINT,
+        UpdateType.MINOR,
+        point,
+      );
+    } catch {
+      this.#pointEditComponent.setAborting();
+    }
   };
 
-  #handleFavoriteClick = () => {
-    this.#handleDataChange(
-      UserAction.UPDATE_POINT,
-      UpdateType.PATCH,
-      {
-        ...this.#point,
-        isFavorite: !this.#point.isFavorite,
-      },
-    );
+  #handleFavoriteClick = async () => {
+    try {
+      await this.#handleDataChange(
+        UserAction.UPDATE_POINT,
+        UpdateType.PATCH,
+        {
+          ...this.#point,
+          isFavorite: !this.#point.isFavorite,
+        },
+      );
+    } catch {
+      this.#pointComponent.shake();
+    }
   };
 
   #escKeyDownHandler = (evt) => {
