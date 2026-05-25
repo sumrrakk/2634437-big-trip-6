@@ -8,7 +8,7 @@ const DEFAULT_POINT_TYPE = 'flight';
 const DATE_FORMAT = 'd/m/y H:i';
 
 const BLANK_POINT = {
-  basePrice: '',
+  basePrice: 0,
   dateFrom: '',
   dateTo: '',
   destination: null,
@@ -32,7 +32,7 @@ function createOfferTemplate(offer, selectedOffers, idSuffix) {
   const isChecked = selectedOffers.includes(offer.id);
 
   return `<div class="event__offer-selector">
-    <input class="event__offer-checkbox  visually-hidden" id="event-offer-${offer.id}-${idSuffix}" type="checkbox" name="event-offer-${offer.id}" ${isChecked ? 'checked' : ''}>
+    <input class="event__offer-checkbox  visually-hidden" id="event-offer-${offer.id}-${idSuffix}" type="checkbox" name="event-offer-${offer.id}" value="${offer.id}" ${isChecked ? 'checked' : ''}>
     <label class="event__offer-label" for="event-offer-${offer.id}-${idSuffix}">
       <span class="event__offer-title">${offer.title}</span>
       &plus;&euro;&nbsp;
@@ -107,7 +107,7 @@ function createPointEditTemplate(point, destinations, offers, isNewPoint) {
 
         <div class="event__field-group  event__field-group--destination">
           <label class="event__label  event__type-output" for="event-destination-${idSuffix}">${capitalize(type)}</label>
-          <input class="event__input  event__input--destination" id="event-destination-${idSuffix}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${idSuffix}">
+          <input class="event__input  event__input--destination" id="event-destination-${idSuffix}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${idSuffix}" required>
           <datalist id="destination-list-${idSuffix}">
             ${destinations.map((item) => createDestinationOptionTemplate(item)).join('')}
           </datalist>
@@ -126,7 +126,7 @@ function createPointEditTemplate(point, destinations, offers, isNewPoint) {
             <span class="visually-hidden">Price</span>
             &euro;
           </label>
-          <input class="event__input  event__input--price" id="event-price-${idSuffix}" type="text" name="event-price" value="${basePrice}">
+          <input class="event__input  event__input--price" id="event-price-${idSuffix}" type="number" name="event-price" value="${basePrice}" min="0" step="1" required>
         </div>
 
         <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
@@ -149,10 +149,11 @@ export default class PointEditView extends AbstractStatefulView {
   #isNewPoint = false;
   #handleFormSubmit = null;
   #handleRollupClick = null;
+  #handleDeleteClick = null;
   #datepickerFrom = null;
   #datepickerTo = null;
 
-  constructor({point = {}, destinations, offers, isNewPoint = false, onFormSubmit = () => {}, onRollupClick = () => {}}) {
+  constructor({point = {}, destinations, offers, isNewPoint = false, onFormSubmit = () => {}, onRollupClick = () => {}, onDeleteClick = () => {}}) {
     super();
     this._state = PointEditView.parsePointToState(point);
     this.#destinations = destinations;
@@ -160,6 +161,7 @@ export default class PointEditView extends AbstractStatefulView {
     this.#isNewPoint = isNewPoint;
     this.#handleFormSubmit = onFormSubmit;
     this.#handleRollupClick = onRollupClick;
+    this.#handleDeleteClick = onDeleteClick;
 
     this._restoreHandlers();
   }
@@ -181,8 +183,11 @@ export default class PointEditView extends AbstractStatefulView {
   _restoreHandlers() {
     this.element.querySelector('form').addEventListener('submit', this.#formSubmitHandler);
     this.element.querySelector('.event__rollup-btn')?.addEventListener('click', this.#rollupClickHandler);
+    this.element.querySelector('.event__reset-btn').addEventListener('click', this.#deleteClickHandler);
     this.element.querySelector('.event__type-group').addEventListener('change', this.#eventTypeChangeHandler);
     this.element.querySelector('.event__input--destination').addEventListener('change', this.#destinationChangeHandler);
+    this.element.querySelector('.event__input--price').addEventListener('input', this.#priceInputHandler);
+    this.element.querySelector('.event__available-offers')?.addEventListener('change', this.#offerChangeHandler);
     this.#setDatepickers();
   }
 
@@ -190,14 +195,33 @@ export default class PointEditView extends AbstractStatefulView {
     return {...BLANK_POINT, ...point};
   }
 
+  static parseStateToPoint(state) {
+    return {
+      ...state,
+      basePrice: Number(state.basePrice),
+    };
+  }
+
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
-    this.#handleFormSubmit();
+    this.#syncStateFromForm();
+
+    if (!this.#isValid()) {
+      this.shake();
+      return;
+    }
+
+    this.#handleFormSubmit(PointEditView.parseStateToPoint(this._state));
   };
 
   #rollupClickHandler = (evt) => {
     evt.preventDefault();
     this.#handleRollupClick();
+  };
+
+  #deleteClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleDeleteClick(PointEditView.parseStateToPoint(this._state));
   };
 
   #eventTypeChangeHandler = (evt) => {
@@ -216,6 +240,24 @@ export default class PointEditView extends AbstractStatefulView {
 
     this.updateElement({
       destination: selectedDestination?.id ?? null,
+    });
+  };
+
+  #priceInputHandler = (evt) => {
+    evt.target.value = evt.target.value.replace(/\D/g, '');
+
+    this._setState({
+      basePrice: evt.target.value,
+    });
+  };
+
+  #offerChangeHandler = () => {
+    const checkedOffers = Array
+      .from(this.element.querySelectorAll('.event__offer-checkbox:checked'))
+      .map((offer) => Number(offer.value));
+
+    this._setState({
+      offers: checkedOffers,
     });
   };
 
@@ -262,5 +304,23 @@ export default class PointEditView extends AbstractStatefulView {
     this.#datepickerTo?.destroy();
     this.#datepickerFrom = null;
     this.#datepickerTo = null;
+  }
+
+  #syncStateFromForm() {
+    const destinationName = this.element.querySelector('.event__input--destination').value;
+    const selectedDestination = this.#destinations.find((destination) => destination.name === destinationName);
+
+    this._setState({
+      destination: selectedDestination?.id ?? null,
+      basePrice: this.element.querySelector('.event__input--price').value,
+    });
+  }
+
+  #isValid() {
+    return this._state.destination !== null
+      && this._state.dateFrom
+      && this._state.dateTo
+      && Number.isInteger(Number(this._state.basePrice))
+      && Number(this._state.basePrice) >= 0;
   }
 }
