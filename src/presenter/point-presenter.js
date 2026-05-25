@@ -72,6 +72,12 @@ export default class PointPresenter {
     }
   }
 
+  destroy() {
+    remove(this.#pointComponent);
+    remove(this.#pointEditComponent);
+    document.removeEventListener('keydown', this.#escKeyDownHandler);
+  }
+
   #getPointDestination() {
     return this.#destinations.find((destination) => destination.id === this.#point.destination);
   }
