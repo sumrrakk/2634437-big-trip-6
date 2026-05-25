@@ -7,6 +7,12 @@ import PointPresenter from './point-presenter.js';
 import PointNewPresenter from './point-new-presenter.js';
 import {filter} from '../utils/filter.js';
 import {FilterType, SortType, UpdateType, UserAction} from '../const.js';
+import UiBlocker from '../framework/ui-blocker/ui-blocker.js';
+
+const TimeLimit = {
+  LOWER_LIMIT: 350,
+  UPPER_LIMIT: 1000,
+};
 
 function sortPointByDay(pointA, pointB) {
   return new Date(pointA.dateFrom) - new Date(pointB.dateFrom);
@@ -34,6 +40,11 @@ export default class TripPresenter {
   #loadingComponent = new LoadingView();
   #pointNewPresenter = null;
   #handleNewPointDestroy = null;
+  #uiBlocker = new UiBlocker({
+    lowerLimit: TimeLimit.LOWER_LIMIT,
+    upperLimit: TimeLimit.UPPER_LIMIT,
+  });
+
   #currentSortType = SortType.DAY;
 
   constructor({tripEventsContainer, tripModel, filterModel, onNewPointDestroy = () => {}}) {
@@ -194,20 +205,22 @@ export default class TripPresenter {
   };
 
   #handleViewAction = async (actionType, updateType, update) => {
+    this.#uiBlocker.block();
+
     try {
       switch (actionType) {
         case UserAction.UPDATE_POINT:
           await this.#tripModel.updatePoint(updateType, update);
           break;
         case UserAction.ADD_POINT:
-          this.#tripModel.addPoint(updateType, update);
+          await this.#tripModel.addPoint(updateType, update);
           break;
         case UserAction.DELETE_POINT:
-          this.#tripModel.deletePoint(updateType, update);
+          await this.#tripModel.deletePoint(updateType, update);
           break;
       }
-    } catch {
-      // Error feedback in edit forms is handled in the next API task.
+    } finally {
+      this.#uiBlocker.unblock();
     }
   };
 

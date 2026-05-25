@@ -52,16 +52,20 @@ export default class PointNewPresenter {
     }
   }
 
-  #handleFormSubmit = (point) => {
-    this.#handleDataChange(
-      UserAction.ADD_POINT,
-      UpdateType.MAJOR,
-      {
-        ...point,
-        id: Date.now(),
-      },
-    );
-    this.#handleDestroy();
+  #handleFormSubmit = async (point) => {
+    this.#pointNewComponent.setSaving();
+
+    try {
+      await this.#handleDataChange(
+        UserAction.ADD_POINT,
+        UpdateType.MAJOR,
+        point,
+      );
+      this.destroy({isSilent: true});
+      this.#handleDestroy();
+    } catch {
+      this.#pointNewComponent.setAborting();
+    }
   };
 
   #handleCancelClick = () => {
