@@ -15,4 +15,4 @@ function generateFilter(points) {
   }));
 }
 
-export {generateFilter};
+export {filter, generateFilter};

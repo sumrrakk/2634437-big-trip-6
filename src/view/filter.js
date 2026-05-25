@@ -17,22 +17,33 @@ function createFilterItemTemplate(filter, isChecked) {
   </div>`;
 }
 
-function createFilterTemplate(filters) {
+function createFilterTemplate(filters, currentFilterType) {
   return `<form class="trip-filters" action="#" method="get">
-    ${filters.map((filter, index) => createFilterItemTemplate(filter, index === 0)).join('')}
+    ${filters.map((filter) => createFilterItemTemplate(filter, filter.type === currentFilterType)).join('')}
     <button class="visually-hidden" type="submit">Accept filter</button>
   </form>`;
 }
 
 export default class FilterView extends AbstractView {
   #filters = null;
+  #currentFilterType = null;
+  #handleFilterTypeChange = null;
 
-  constructor({filters}) {
+  constructor({filters, currentFilterType, onFilterTypeChange}) {
     super();
     this.#filters = filters;
+    this.#currentFilterType = currentFilterType;
+    this.#handleFilterTypeChange = onFilterTypeChange;
+
+    this.element.addEventListener('change', this.#filterTypeChangeHandler);
   }
 
   get template() {
-    return createFilterTemplate(this.#filters);
+    return createFilterTemplate(this.#filters, this.#currentFilterType);
   }
+
+  #filterTypeChangeHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleFilterTypeChange(evt.target.value);
+  };
 }
