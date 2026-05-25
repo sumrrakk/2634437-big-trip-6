@@ -1,5 +1,5 @@
 import {EVENT_TYPES} from '../const.js';
-import AbstractView from '../framework/view/abstract-view.js';
+import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import {capitalize, formatEditDate} from '../utils/point.js';
 
 const DEFAULT_POINT_TYPE = 'flight';
@@ -140,8 +140,7 @@ function createPointEditTemplate(point, destinations, offers, isNewPoint) {
   </li>`;
 }
 
-export default class PointEditView extends AbstractView {
-  #point = null;
+export default class PointEditView extends AbstractStatefulView {
   #destinations = null;
   #offers = null;
   #isNewPoint = false;
@@ -150,19 +149,29 @@ export default class PointEditView extends AbstractView {
 
   constructor({point = {}, destinations, offers, isNewPoint = false, onFormSubmit = () => {}, onRollupClick = () => {}}) {
     super();
-    this.#point = point;
+    this._state = PointEditView.parsePointToState(point);
     this.#destinations = destinations;
     this.#offers = offers;
     this.#isNewPoint = isNewPoint;
     this.#handleFormSubmit = onFormSubmit;
     this.#handleRollupClick = onRollupClick;
 
-    this.element.querySelector('form').addEventListener('submit', this.#formSubmitHandler);
-    this.element.querySelector('.event__rollup-btn')?.addEventListener('click', this.#rollupClickHandler);
+    this._restoreHandlers();
   }
 
   get template() {
-    return createPointEditTemplate(this.#point, this.#destinations, this.#offers, this.#isNewPoint);
+    return createPointEditTemplate(this._state, this.#destinations, this.#offers, this.#isNewPoint);
+  }
+
+  _restoreHandlers() {
+    this.element.querySelector('form').addEventListener('submit', this.#formSubmitHandler);
+    this.element.querySelector('.event__rollup-btn')?.addEventListener('click', this.#rollupClickHandler);
+    this.element.querySelector('.event__type-group').addEventListener('change', this.#eventTypeChangeHandler);
+    this.element.querySelector('.event__input--destination').addEventListener('change', this.#destinationChangeHandler);
+  }
+
+  static parsePointToState(point) {
+    return {...BLANK_POINT, ...point};
   }
 
   #formSubmitHandler = (evt) => {
@@ -173,5 +182,24 @@ export default class PointEditView extends AbstractView {
   #rollupClickHandler = (evt) => {
     evt.preventDefault();
     this.#handleRollupClick();
+  };
+
+  #eventTypeChangeHandler = (evt) => {
+    evt.preventDefault();
+
+    this.updateElement({
+      type: evt.target.value,
+      offers: [],
+    });
+  };
+
+  #destinationChangeHandler = (evt) => {
+    evt.preventDefault();
+
+    const selectedDestination = this.#destinations.find((destination) => destination.name === evt.target.value);
+
+    this.updateElement({
+      destination: selectedDestination?.id ?? null,
+    });
   };
 }
