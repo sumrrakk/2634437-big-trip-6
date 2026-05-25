@@ -1,12 +1,13 @@
-import {render} from '../render.js';
+import {render, replace} from '../framework/render.js';
 import FilterView from '../view/filter.js';
 import SortView from '../view/sort.js';
 import ListView from '../view/list.js';
 import PointView from '../view/point.js';
 import PointEditView from '../view/point-edit.js';
-import PointNewView from '../view/point-new.js';
 
 export default class TripPresenter {
+  #currentOpenFormCloseHandler = null;
+
   constructor({filterContainer, tripEventsContainer, tripModel}) {
     this.filterContainer = filterContainer;
     this.tripEventsContainer = tripEventsContainer;
@@ -33,26 +34,60 @@ export default class TripPresenter {
     render(new SortView(), this.tripEventsContainer);
     render(this.tripEventsListComponent, this.tripEventsContainer);
 
-    const tripEventsListElement = this.tripEventsListComponent.getElement();
-    const firstPoint = points[0];
-
-    render(new PointEditView({
-      point: firstPoint,
-      destinations,
-      offers,
-    }), tripEventsListElement);
-
-    render(new PointNewView({
-      destinations,
-      offers,
-    }), tripEventsListElement);
+    const tripEventsListElement = this.tripEventsListComponent.element;
 
     points.forEach((point) => {
-      render(new PointView({
-        point,
-        destination: this.getPointDestination(point),
-        offers: this.getPointOffers(point),
-      }), tripEventsListElement);
+      this.#renderPoint(point, destinations, offers, tripEventsListElement);
     });
+  }
+
+  #renderPoint(point, destinations, offers, tripEventsListElement) {
+    let pointComponent = null;
+    let pointEditComponent = null;
+
+    const replaceFormToPoint = () => {
+      replace(pointComponent, pointEditComponent);
+      document.removeEventListener('keydown', escKeyDownHandler);
+      if (this.#currentOpenFormCloseHandler === replaceFormToPoint) {
+        this.#currentOpenFormCloseHandler = null;
+      }
+    };
+
+    const replacePointToForm = () => {
+      this.#currentOpenFormCloseHandler?.();
+      replace(pointEditComponent, pointComponent);
+      document.addEventListener('keydown', escKeyDownHandler);
+      this.#currentOpenFormCloseHandler = replaceFormToPoint;
+    };
+
+    function escKeyDownHandler(evt) {
+      if (evt.key === 'Escape') {
+        evt.preventDefault();
+        replaceFormToPoint();
+      }
+    }
+
+    pointComponent = new PointView({
+      point,
+      destination: this.getPointDestination(point),
+      offers: this.getPointOffers(point),
+      onEditClick: () => {
+        replacePointToForm();
+      },
+    });
+
+    pointEditComponent = new PointEditView({
+      point,
+      destinations,
+      offers,
+      onFormSubmit: () => {
+        replaceFormToPoint();
+      },
+      onRollupClick: () => {
+        replaceFormToPoint();
+      },
+    });
+
+    render(pointComponent, tripEventsListElement);
   }
 }
