@@ -1,22 +1,16 @@
-const MILLISECONDS_IN_MINUTE = 60000;
-const MINUTES_IN_HOUR = 60;
-const HOURS_IN_DAY = 24;
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration.js';
+
+dayjs.extend(duration);
 
 const DateFormat = {
-  DAY: {month: 'short', day: '2-digit'},
-  TIME: {hour: '2-digit', minute: '2-digit', hour12: false},
-  EDIT: {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  },
+  DAY: 'MMM DD',
+  TIME: 'HH:mm',
+  EDIT: 'DD/MM/YY HH:mm',
 };
 
 function formatDate(date, format) {
-  return new Intl.DateTimeFormat('en-GB', format).format(new Date(date));
+  return dayjs(date).format(format);
 }
 
 function formatDay(date) {
@@ -32,10 +26,10 @@ function formatEditDate(date) {
 }
 
 function humanizeDuration(dateFrom, dateTo) {
-  const duration = Math.round((new Date(dateTo) - new Date(dateFrom)) / MILLISECONDS_IN_MINUTE);
-  const days = Math.floor(duration / (MINUTES_IN_HOUR * HOURS_IN_DAY));
-  const hours = Math.floor((duration % (MINUTES_IN_HOUR * HOURS_IN_DAY)) / MINUTES_IN_HOUR);
-  const minutes = duration % MINUTES_IN_HOUR;
+  const pointDuration = dayjs.duration(dayjs(dateTo).diff(dayjs(dateFrom)));
+  const days = Math.floor(pointDuration.asDays());
+  const hours = pointDuration.hours();
+  const minutes = pointDuration.minutes();
 
   if (days > 0) {
     return `${String(days).padStart(2, '0')}D ${String(hours).padStart(2, '0')}H ${String(minutes).padStart(2, '0')}M`;

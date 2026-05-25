@@ -29,5 +29,9 @@
     "last 2 versions",
     "not dead",
     "not ie <= 11"
-  ]
+  ],
+  "dependencies": {
+    "dayjs": "^1.11.20",
+    "flatpickr": "^4.6.13"
+  }
 }
