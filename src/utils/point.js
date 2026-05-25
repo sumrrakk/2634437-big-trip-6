@@ -52,4 +52,18 @@ function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export {formatDay, formatTime, formatEditDate, humanizeDuration, capitalize};
+function isPointFuture(point) {
+  return new Date(point.dateFrom) > new Date();
+}
+
+function isPointPresent(point) {
+  const now = new Date();
+
+  return new Date(point.dateFrom) <= now && new Date(point.dateTo) >= now;
+}
+
+function isPointPast(point) {
+  return new Date(point.dateTo) < new Date();
+}
+
+export {formatDay, formatTime, formatEditDate, humanizeDuration, capitalize, isPointFuture, isPointPresent, isPointPast};
