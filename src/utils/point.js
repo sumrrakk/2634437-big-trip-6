@@ -5,6 +5,8 @@ dayjs.extend(duration);
 
 const DateFormat = {
   DAY: 'MMM DD',
+  INFO_DATE: 'D MMM',
+  INFO_DATE_WITH_MONTH: 'D MMM',
   TIME: 'HH:mm',
   EDIT: 'DD/MM/YY HH:mm',
 };
@@ -19,6 +21,10 @@ function formatDay(date) {
 
 function formatTime(date) {
   return formatDate(date, DateFormat.TIME);
+}
+
+function formatInfoDate(date) {
+  return formatDate(date, DateFormat.INFO_DATE);
 }
 
 function formatEditDate(date) {
@@ -60,4 +66,4 @@ function isPointPast(point) {
   return new Date(point.dateTo) < new Date();
 }
 
-export {formatDay, formatTime, formatEditDate, humanizeDuration, capitalize, isPointFuture, isPointPresent, isPointPast};
+export {formatDay, formatTime, formatInfoDate, formatEditDate, humanizeDuration, capitalize, isPointFuture, isPointPresent, isPointPast};
