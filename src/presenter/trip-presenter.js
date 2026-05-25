@@ -2,9 +2,10 @@ import {render, remove} from '../framework/render.js';
 import SortView from '../view/sort.js';
 import ListView from '../view/list.js';
 import EmptyListView from '../view/empty-list.js';
+import LoadingView from '../view/loading.js';
 import PointPresenter from './point-presenter.js';
 import PointNewPresenter from './point-new-presenter.js';
-import {filter} from '../mock/filter.js';
+import {filter} from '../utils/filter.js';
 import {FilterType, SortType, UpdateType, UserAction} from '../const.js';
 
 function sortPointByDay(pointA, pointB) {
@@ -30,6 +31,7 @@ export default class TripPresenter {
   #tripEventsListComponent = new ListView();
   #sortComponent = null;
   #emptyListComponent = null;
+  #loadingComponent = new LoadingView();
   #pointNewPresenter = null;
   #handleNewPointDestroy = null;
   #currentSortType = SortType.DAY;
@@ -48,6 +50,11 @@ export default class TripPresenter {
     const points = this.#getPoints();
 
     this.#clearBoard();
+
+    if (this.#tripModel.isLoading()) {
+      this.#renderLoading();
+      return;
+    }
 
     if (points.length === 0) {
       this.#renderEmptyList();
@@ -125,6 +132,10 @@ export default class TripPresenter {
     render(this.#emptyListComponent, this.#tripEventsContainer);
   }
 
+  #renderLoading() {
+    render(this.#loadingComponent, this.#tripEventsContainer);
+  }
+
   #renderPoints(points) {
     const destinations = this.#tripModel.getDestinations();
     const offers = this.#tripModel.getOffers();
@@ -160,10 +171,12 @@ export default class TripPresenter {
     this.#clearPointList();
     remove(this.#sortComponent);
     remove(this.#emptyListComponent);
+    remove(this.#loadingComponent);
     remove(this.#tripEventsListComponent);
 
     this.#sortComponent = null;
     this.#emptyListComponent = null;
+    this.#loadingComponent = new LoadingView();
     this.#tripEventsListComponent = new ListView();
   }
 
@@ -180,17 +193,21 @@ export default class TripPresenter {
     this.init();
   };
 
-  #handleViewAction = (actionType, updateType, update) => {
-    switch (actionType) {
-      case UserAction.UPDATE_POINT:
-        this.#tripModel.updatePoint(updateType, update);
-        break;
-      case UserAction.ADD_POINT:
-        this.#tripModel.addPoint(updateType, update);
-        break;
-      case UserAction.DELETE_POINT:
-        this.#tripModel.deletePoint(updateType, update);
-        break;
+  #handleViewAction = async (actionType, updateType, update) => {
+    try {
+      switch (actionType) {
+        case UserAction.UPDATE_POINT:
+          await this.#tripModel.updatePoint(updateType, update);
+          break;
+        case UserAction.ADD_POINT:
+          this.#tripModel.addPoint(updateType, update);
+          break;
+        case UserAction.DELETE_POINT:
+          this.#tripModel.deletePoint(updateType, update);
+          break;
+      }
+    } catch {
+      // Error feedback in edit forms is handled in the next API task.
     }
   };
 
